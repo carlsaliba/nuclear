@@ -91,36 +91,73 @@ print(f"Using {device} device")
 # In[8]:
 
 
-class NeuralNetwork(nn.Module):
-    def __init__(self,input_size=1,output_size=1):
+class MLP(nn.Module):
+    def __init__(self, dim=512, activation=nn.Tanh(), p_drop=0.05):
         super().__init__()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),nn.Linear(512, 512),
-            nn.Tanh(),
-            nn.Linear(512, output_size,bias=False),
+        
+        self.block = nn.Sequential(
+            nn.Linear(dim, dim),
+            activation,
+            nn.Dropout(p_drop),
+            nn.Linear(dim, dim),
+            nn.Dropout(p_drop)
         )
+        self.activation = activation
+        
+    def forward(self, x):
+        return self.activation(x + self.block(x))
+
+
+# In[9]:
+
+
+class kamma_2(nn.Module):
+    def __init__(self, in_dim=1, dim=128, depth=3, p_drop=0.05,activation=nn.Tanh()):
+        super().__init__()
+        
+        self.inp = nn.Linear(in_dim, dim)
+        self.blocks = nn.ModuleList([MLP(dim,activation,p_drop) for _ in range(depth)])
+        self.out = nn.Linear(dim, 1)
         self.loss_fn = nn.MSELoss()
 
-    def forward(self, input: torch.Tensor, labels: torch.Tensor = None):
-        logits = self.linear_relu_stack(input)
+    def forward(self, input: torch.Tensor, labels: torch.Tensor = None):        
+        h = self.inp(input)
+        for blk in self.blocks:
+            h = blk(h)
+        logits = self.out(h)
         if labels is not None:
             loss = self.loss_fn(logits, labels)
             return {"loss": loss, "logits": logits}
         return {"logits": logits}
-        
-model = NeuralNetwork().to(device)
+
+
+# In[10]:
+
+
+model = kamma_2(in_dim=1, dim=512, depth=15, p_drop=0.05,activation=nn.Tanh()).to(
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
 print(model)
 
 
-# In[9]:
+# In[11]:
+
+
+# # Check specific parameters
+# for name, param in model.named_parameters():
+#     print(f"{name}: {param.device}")
+#     break  # Just check the first one, usually all are on same device
+
+
+# In[12]:
+
+
+def num_of_param(model):
+    return sum(p.numel() for p in model.parameters())
+num_of_param(model)
+
+
+# In[13]:
 
 
 def compute_metrics(eval_pred):
@@ -146,21 +183,20 @@ def collate_scalar_to_column(batch):
     return {"input": inputs, "labels": labels}
 
 
-# In[10]:
+# In[14]:
 
 
 training_args = TrainingArguments(
             output_dir='./results',
             learning_rate=1e-4,
-            per_device_train_batch_size=4,  
-            per_device_eval_batch_size=4,
+            per_device_train_batch_size=256,  
+            per_device_eval_batch_size=256,
             max_steps=10000,  # Replace with your desired number of steps
             weight_decay=0.02,
             eval_strategy='steps', 
             eval_steps=1000,  #the save step should be a multiple of eval step, savestep=500 by default
             lr_scheduler_type="cosine",
             warmup_ratio=0.1    
-
         )
 # ---------------- 7) Trainer ----------------
 trainer = Trainer(
@@ -173,37 +209,37 @@ trainer = Trainer(
 )
 
 
-# In[11]:
+# In[15]:
 
 
 trainer.train()
 
 
-# In[28]:
+# In[16]:
 
 
 torch.tensor(train_ds["input"]).reshape(-1,1).shape
 
 
-# In[29]:
+# In[17]:
 
 
 out=trainer.model(torch.tensor(train_ds["input"]).reshape(-1,1))
 
 
-# In[36]:
+# In[18]:
 
 
 out_1=out["logits"].reshape(-1).detach().numpy()
 
 
-# In[38]:
+# In[19]:
 
 
 np.array(train_ds["input"])
 
 
-# In[40]:
+# In[20]:
 
 
 import matplotlib.pyplot as plt
