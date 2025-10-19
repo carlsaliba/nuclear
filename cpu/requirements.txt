@@ -1,0 +1,10 @@
+conda create -n torch_cpu python=3.10
+conda activate torch_cpu
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install transformers datasets tqdm scikit-learn
+pip install jupyterlab
+
+
+pip install transformers[torch]
+
+pip install matplotlib 
