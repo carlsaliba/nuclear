@@ -47,3 +47,13 @@ Run the following command to install the necessary Python packages:
 
 ```bash
 pip install -r requirements.txt
+```
+
+---
+
+## 🪪 License
+
+This project is licensed under the **MIT License** — you are free to use, modify, and distribute this code for any purpose, with or without attribution.
+
+See the [LICENSE](LICENSE) file for full details.
+
