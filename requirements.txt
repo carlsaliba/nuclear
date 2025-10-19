@@ -1,0 +1,19 @@
+--index-url https://download.pytorch.org/whl/cu128
+torch
+torchvision
+torchaudio
+
+--index-url https://pypi.org/simple
+transformers[torch]
+datasets
+tqdm
+scikit-learn
+matplotlib
+jupyterlab
+
+# Needed for Hugging Face Trainer
+accelerate>=0.26.0
+
+# Optional GPU/transformer performance extras
+xformers
+bitsandbytes
